@@ -1,10 +1,40 @@
 ---
-
-# tasks file for osp.servers
+## tasks file for osp.servers
 - name: Create new server instances and attaches them a network and passes metadata to the instance
+  os_server:
+    cloud: ospcloud
+    state: present
+    name: "{{ item.name }}"
+    image: "{{ item.image }}"
+    key_name: "{{ item.key_name }}"
+    timeout: 200
+    flavor: "{{ item.flavor }}"
+    network: int_network
+    auto_ip: no
+    security_groups: "{{ item.security_group }}"
+    meta: "{{ item.meta }}"
+  loop: "{{ osp_servers }}"
+  register: create_osp_servers
 
+#- name: osp debug
+#  debug:
+#    msg: "{{ create_osp_servers.results }}"
 
 - name: Add floating IP to Servers
-   
+  os_floating_ip: 
+    cloud: ospcloud
+    state: present
+    server: "{{ item.openstack.name }}"
+    network: ext_network
+  loop: "{{ create_osp_servers.results }}"
+  register: fip_osp_servers
+
+#- name: fip debug
+#  debug:
+#    msg: "{{ fip_osp_servers.results }}"
 
 - name: Wait for server to be available
+  add_host:
+    name: "{{ item.oprnstack.publicipv4 }}"
+    group: osp
+  loop: "{{ fip_osp_servers.results }}"
